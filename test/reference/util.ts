@@ -1,5 +1,5 @@
 /** APO util subset for reference parity. */
-const ADDRESS_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ADDRESS_RE = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/i;
 
 /** Lowercase domain, strip trailing dot. */
 export function normalizeDomain(value: string): string {

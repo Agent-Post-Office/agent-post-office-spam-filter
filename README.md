@@ -6,7 +6,7 @@ Extracted from [Agent Post Office](https://github.com/Agent-Post-Office/agentpos
 
 **Never drops mail.** This package only scores. Your app decides whether to tag, move to a spam folder, or leave the message alone.
 
-> Status: v0.1.0, [published on npm](https://www.npmjs.com/package/@agent-post-office/spam-filter). Release steps are in [RELEASING.md](RELEASING.md).
+> Status: v0.1.1, [published on npm](https://www.npmjs.com/package/@agent-post-office/spam-filter). Release steps are in [RELEASING.md](RELEASING.md).
 
 Scorer matches APO main `8ccceaf`: content rules, Authentication-Results, allow/block lists, and Bayes from operator marks. The optional SpamAssassin rule add-on is **planned** and is not exported yet.
 
@@ -169,7 +169,7 @@ npm install @agent-post-office/spam-filter
 Or pin a git tag:
 
 ```json
-"@agent-post-office/spam-filter": "github:Agent-Post-Office/agent-post-office-spam-filter#v0.1.0"
+"@agent-post-office/spam-filter": "github:Agent-Post-Office/agent-post-office-spam-filter#v0.1.1"
 ```
 
 The package `prepare` script runs `tsc` so git installs build `dist/`.

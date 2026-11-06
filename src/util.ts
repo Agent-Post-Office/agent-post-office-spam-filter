@@ -1,4 +1,6 @@
-const ADDRESS_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Same address shape as the Worker mailbox normalizer, including single-label
+// domains such as the inbound invalid-sender placeholder.
+const ADDRESS_RE = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/i;
 
 /** Lowercase domain, strip trailing dot. */
 export function normalizeDomain(value: string): string {
