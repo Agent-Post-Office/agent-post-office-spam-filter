@@ -48,7 +48,9 @@
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "sa:verify": "node scripts/sa/verify.mjs",
-    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+    "eval": "npm run build && node scripts/eval.mjs",
+    "eval:public": "npm run build && node scripts/eval-public.mjs",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build && node scripts/eval.mjs"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

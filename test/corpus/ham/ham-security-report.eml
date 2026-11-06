@@ -1,0 +1,10 @@
+From: Security <security@example.com>
+To: Bob Example <bob@example.com>
+Subject: Weekly security report
+Date: Fri, 06 Nov 2026 10:00:00 +0000
+Message-ID: <ham-security-report@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Authentication-Results: mx.example.net; dkim=pass; spf=pass; dmarc=pass
+
+No new alerts this week. The last scan finished on Thursday. Nothing needs a reply.

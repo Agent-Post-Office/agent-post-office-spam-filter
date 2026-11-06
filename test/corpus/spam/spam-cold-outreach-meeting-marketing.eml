@@ -1,0 +1,10 @@
+From: Sales <sales@mg.example.net>
+To: Owner Example <owner@example.com>
+Subject: We tested your site
+Date: Fri, 06 Nov 2026 10:00:00 +0000
+Message-ID: <spam-cold-outreach-meeting-marketing@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Authentication-Results: mx.example.net; dkim=pass; spf=pass; dmarc=pass
+
+We noticed your pages. Got 15 minutes? Book a demo.

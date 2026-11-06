@@ -1,0 +1,10 @@
+From: Accounts <accounts@example.com>
+To: Bob Example <bob@example.com>
+Subject: Verify your email
+Date: Fri, 06 Nov 2026 10:00:00 +0000
+Message-ID: <ham-verification-subject-only@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Authentication-Results: mx.example.net; dkim=pass; spf=pass; dmarc=pass
+
+Please open https://accounts.example.com/verify/placeholder when you have a minute. This confirms the address on your account.

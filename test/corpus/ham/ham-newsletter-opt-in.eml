@@ -1,0 +1,11 @@
+From: Weekly Notes <digest@lists.example.org>
+To: Bob Example <bob@example.com>
+Subject: Your weekly notes
+Date: Fri, 06 Nov 2026 10:00:00 +0000
+Message-ID: <ham-newsletter-opt-in@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Authentication-Results: mx.example.net; dkim=pass; spf=pass; dmarc=pass
+List-Unsubscribe: <mailto:digest@lists.example.org>
+
+Here are the three notes you subscribed to last month. Reply if you want them less often.

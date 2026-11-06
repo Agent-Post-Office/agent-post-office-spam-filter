@@ -204,18 +204,38 @@ Skipped rule names come back on `skipped`. They are omitted from the score.
 
 ### What this layer covers
 
-The rule table is generated from SpamAssassin update channel **r1939780** and checked in. `npm run sa:verify` downloads `https://sa-update.spamassassin.org/1939780.tar.gz`, checks sha256 `746079a187eefcee1806d077f54f1c0c0f8cb7ac39ce4f8cd94e49ec7a6ca04a`, recompiles, and diffs `src/spamassassin/generated.ts`. `npm run sa:verify -- --write` regenerates that file. The script needs `tar` and network. The scorer itself never fetches rules. `npm test` does not download the snapshot.
+The rule table is generated from SpamAssassin update channel **r1939780** and checked in. `npm run sa:verify` downloads `https://sa-update.spamassassin.org/1939780.tar.gz`, checks sha256 `746079a187eefcee1806d077f54f1c0c0f8cb7ac39ce4f8cd94e49ec7a6ca04a`, recompiles, and diffs `src/spamassassin/generated.ts`. `npm run sa:verify -- --write` regenerates that file. The script needs `tar` and network. The scorer itself never fetches rules. `npm test` does not download the snapshot. GitHub Actions runs that check weekly and on `workflow_dispatch` (`.github/workflows/sa-verify.yml`). The workflow has `permissions: contents: read` and no secrets. It fails when the snapshot hash or the regenerated table differs. Pull-request CI does not download the snapshot.
 
 `if version` lines are evaluated as SpamAssassin **4.000001**. Changing that version changes which rules are selected.
 
 1536 rules are in the table. 322 carry a non-zero score. 100 have score 0 and do not match. The standard GTUBE string scores at least 1000 native points.
 
-On a fresh run of the public corpus (sha256 checked, message text not stored here):
+On a fresh run of the public corpus (sha256 checked, messages not stored in this repository):
 
 | Corpus | Messages scored | Native score ≥ 5 |
 | --- | --- | --- |
 | `20050311_spam_2` | 1396 | **205** |
 | `20030228_easy_ham` | 2500 | **8** |
+
+Those archives stay a pinned download. Their redistribution terms are unclear, and they contain other people's mail, so they are not committed. `npm run eval:public` downloads them, checks sha256, scores them, and fails if those counts change. `npm run eval:public -- --list` also prints the filename and hit names for each message at or above 5. It does not print message text. The cache is `vendor/spamassassin/corpus/`, which is gitignored.
+
+| Corpus | Archive | sha256 |
+| --- | --- | --- |
+| `easy_ham` | `https://spamassassin.apache.org/old/publiccorpus/20030228_easy_ham.tar.bz2` | `2b7b65904bcfcc31d2b5f51946f2d261370b257402cbbd62930b46ab83367438` |
+| `spam_2` | `https://spamassassin.apache.org/old/publiccorpus/20050311_spam_2.tar.bz2` | `44280a0e28bf7645b2279e8e42659271ad82c6f40bf8d364dbda7f1df344a765` |
+
+The eight easy-ham messages at or above 5 are upstream hits. The headers and body patterns those rules name are present in the messages. On the two `MIXED_HREF_CASE` messages, a line scan and a whole-part scan still show a mixed-case href difference, which is what that rule matches. Rule scores were left as published. Before and after that check, easy ham at or above 5 is 8 of 2500, and spam_2 at or above 5 is 205 of 1396.
+
+| File | Hits |
+| --- | --- |
+| `easy_ham/00024.59c2cb781c60594315241e2b50ea70e2` | `MAILING_LIST_MULTI`, `AXB_XMAILER_MIMEOLE_OL_024C2`, `HK_RANDOM_REPLYTO`, `MSOE_MID_WRONG_CASE` |
+| `easy_ham/00062.009f5a1a8fa88f0b38299ad01562bb37` | `AXB_XMAILER_MIMEOLE_OL_024C2`, `MIXED_HREF_CASE`, `MSOE_MID_WRONG_CASE` |
+| `easy_ham/00115.d5db4a9d477aa17a19669e3945b7aedb` | `MAILING_LIST_MULTI`, `AXB_XMAILER_MIMEOLE_OL_024C2`, `HK_RANDOM_REPLYTO`, `MSOE_MID_WRONG_CASE` |
+| `easy_ham/00116.22aef63fc606e0ad46b5593bc897469a` | `MAILING_LIST_MULTI`, `AXB_XMAILER_MIMEOLE_OL_024C2`, `HK_RANDOM_REPLYTO`, `MSOE_MID_WRONG_CASE` |
+| `easy_ham/00118.f15bf997342540b404a4672c47d57d55` | `MAILING_LIST_MULTI`, `AXB_XMAILER_MIMEOLE_OL_024C2`, `HK_RANDOM_REPLYTO`, `MSOE_MID_WRONG_CASE` |
+| `easy_ham/00123.91b85aaea560d92f9199f9ba74e77918` | `MAILING_LIST_MULTI`, `AXB_XMAILER_MIMEOLE_OL_024C2`, `HK_RANDOM_REPLYTO`, `MSOE_MID_WRONG_CASE` |
+| `easy_ham/00166.8feace9f17d092d9532e62c35c37ce95` | `DRUGS_ANXIETY`, `FSL_HAS_TINYURL`, `MIXED_HREF_CASE` |
+| `easy_ham/00225.13c1eaece69dd93afacadb48189e65fc` | `MAILING_LIST_MULTI`, `AXB_XMAILER_MIMEOLE_OL_024C2`, `HK_RANDOM_REPLYTO`, `MSOE_MID_WRONG_CASE` |
 
 Median time on that spam set was about **3.4 ms** in this environment. The slowest easy-ham message was about **203 ms**. An earlier development pass also found no hits on Agent Post Office cold-pitch samples. Those samples are not in this repository.
 
@@ -230,13 +250,43 @@ The add-on figure includes `postal-mime` and `htmlparser2`. The core bundle cont
 
 ### Limitations
 
-- This is a rule-only subset. Eval plugins (401 `eval:` declarations in the snapshot), DNS tests (`uridnssub`, `urirhssub`, `askdns`, and `tflags net`), Bayes (`tflags learn`), `mimeheader` directives, and trust-path headers (`X-Spam-Relays-*`, `ALL-*`, `EnvelopeFrom`) are absent. A meta rule is dropped when any dependency was dropped, so a missing test cannot become a hit.
+- This is a rule-only subset. Eval plugins (401 `eval:` declarations in the snapshot), DNS tests (`uridnssub`, `urirhssub`, `askdns`, and `tflags net`), Bayes (`tflags learn`), `mimeheader` directives, and trust-path headers (`X-Spam-Relays-*`, `ALL-*`, `EnvelopeFrom`) are absent. A meta rule is dropped when any dependency was dropped, so a missing test cannot become a hit. The `mimeheader` rules (62 directives in this snapshot) are left for a later change.
 - MIME structure and HTML visibility are approximate. `postal-mime`'s public `text` and `html` fields synthesize the missing alternative, which would double-count parts. The scorer walks the parser's MIME tree instead: `root`, `childNodes`, `contentType.parsed.value`, and `getTextContent`. Those fields are not a public API. They were checked against **postal-mime 2.7.4**. If the shape is missing, scoring throws `SpamAssassinError` rather than guessing. Upgrading `postal-mime` means re-checking this walk.
 - JavaScript regular expressions can spend a long time on a hostile pattern. There is no per-rule time limit. Raw input over **2,000,000** bytes throws before parsing. Each text part keeps at most 50,000 visible characters and 500,000 rawbody characters. Paragraphs are capped at 2,048 bytes and rawbody chunks at 4,096.
 - Header rules see the raw message, including any `Authentication-Results` the sender wrote. Core authentication points still come from the header the host passes to `scoreMessage`.
 - Native points and the core 0-100 score are different scales. Folding uses the cap above. The core default threshold stays 60 either way.
 
 See `NOTICE`. SpamAssassin is a trademark of the Apache Software Foundation. These are modified rule representations translated to JavaScript, not the SpamAssassin engine. No endorsement is implied.
+
+## Evaluation fixtures
+
+`test/corpus` is a labeled set of synthetic messages: 45 total, 25 ham and 20 spam. `npm run eval` builds the package, scores every fixture with `scoreMessage` and with `scoreSpamAssassin`, and applies the default fold. The verdict that must match the label is that folded verdict. The command prints a core-only confusion matrix and a folded confusion matrix. It exits non-zero when a folded verdict disagrees with its label, or when the false-positive or false-negative total differs from `expectedCounts` in `test/corpus/manifest.json`. Pull-request CI runs this.
+
+A disagreement is allowed only through `expected.verdict` plus `expected.reason` on that fixture. The committed counts are 0 false positives and 3 false negatives:
+
+| Fixture | Why the folded verdict stays ham |
+| --- | --- |
+| `spam-gtube` | GTUBE is 1000 native points. The default fold adds at most 52, and 52 stays ham at threshold 60. |
+| `spam-advance-fee` | Advance-fee wording matches SpamAssassin body rules and no core rule. The fold adds only those points. |
+| `spam-pharmacy` | Pharmacy wording matches SpamAssassin rules and no core rule. The fold adds only those points. |
+
+`spam-gtube-plus-verification` and `spam-advance-plus-auth` are the cases where that same fold crosses 60 because the core score is already partway there. `ham-allow-overrides-pitch` stays ham: an allow decision is not changed by the fold.
+
+Folded confusion matrix for this set:
+
+| label \ verdict | ham | spam |
+| --- | --- | --- |
+| ham | 25 | 0 |
+| spam | 3 | 17 |
+
+Do not add real mail. Not from Agent Post Office, not from a mailbox, and not from the SpamAssassin public corpus. Addresses must use `example.com`, `example.org`, `example.net`, or the single-label domain `invalid`. Names must be placeholders. `npm run eval` rejects any other domain.
+
+### Add a fixture
+
+1. Add `test/corpus/ham/<id>.eml` or `test/corpus/spam/<id>.eml`. Include a normal `Date` and `Message-ID` so missing-header rules do not fire by accident.
+2. Add a row to `test/corpus/manifest.json` with `id`, `label` (`ham` or `spam`), `file`, a short `reason`, `source` set to `synthetic`, `recipientDomain`, and `authenticationResults`. The runner passes that authentication header to the core scorer. It is the host-supplied header.
+3. Optional `lists` covers an allow or block decision. Optional `expected` is only for a verdict that is supposed to disagree with the label. If you add one, update `expectedCounts`.
+4. Run `npm run eval`. If the folded verdict disagrees with the label and that is not intentional, change the fixture or the scorer. Do not quiet a surprise by adding `expected` without a reason you can defend.
 
 ## Install
 
