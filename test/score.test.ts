@@ -338,6 +338,15 @@ describe("spam rules scorer", () => {
     )).toEqual({ mode: "tag", threshold: 60 });
   });
 
+  it("leaves the GTUBE string ham when the SpamAssassin add-on is not used", () => {
+    const gtube = "XJS*C4JDBQADN1.NSBN3*2IDNEN*GTUBE-STANDARD-ANTI-UBE-TEST-EMAIL*C.34X";
+    expect(scoreSpam(message({
+      from: "alice@example.com",
+      subject: "Test",
+      text: gtube,
+    }))).toEqual({ score: 0, reasons: [], verdict: "ham" });
+  });
+
   it("tags in place, quarantines into the spam folder, and never drops mail when off", () => {
     const spam = scoreSpam(message({
       from: "sales@mg.example.net",

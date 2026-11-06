@@ -9,7 +9,9 @@ import { renderHtml } from "../src/spamassassin/html.js";
 import { paragraphs } from "../src/spamassassin/text.js";
 import {
   SPAMASSASSIN_CORE_CAP,
+  SPAMASSASSIN_GTUBE_RULE,
   SPAMASSASSIN_RAW_BYTE_LIMIT,
+  SPAMASSASSIN_STANDALONE_SPAM_SCORE,
   SPAMASSASSIN_THRESHOLD,
   SpamAssassinError,
   foldSpamAssassin,
@@ -159,39 +161,76 @@ describe("scoreSpamAssassin", () => {
 });
 
 describe("foldSpamAssassin", () => {
-  it("maps native points onto the core scale with a cap under the default threshold", () => {
+  const ham = () => scoreMessage({
+    from: "alice@example.com",
+    subject: "Lunch on Friday",
+    text: "Hi Bob, lunch on Friday still works for me.",
+    authenticationResults: null,
+    recipientDomain: "example.com",
+  });
+
+  it("adds capped points below the standalone score and does not flag on that alone", () => {
     expect(spamAssassinCorePoints(4.6)).toBe(0);
     expect(spamAssassinCorePoints(5)).toBe(5);
     expect(spamAssassinCorePoints(5.5)).toBe(6);
+    expect(spamAssassinCorePoints(9.4)).toBe(9);
+    expect(spamAssassinCorePoints(9.6)).toBe(10);
     expect(spamAssassinCorePoints(-4)).toBe(0);
     expect(spamAssassinCorePoints(1000)).toBe(SPAMASSASSIN_CORE_CAP);
     expect(spamAssassinCorePoints(1000, 10)).toBe(10);
     expect(SPAMASSASSIN_CORE_CAP).toBeLessThan(60);
+    expect(SPAMASSASSIN_STANDALONE_SPAM_SCORE).toBe(10);
 
-    const ham = scoreMessage({
-      from: "alice@example.com",
-      subject: "Lunch on Friday",
-      text: "Hi Bob, lunch on Friday still works for me.",
-      authenticationResults: null,
-      recipientDomain: "example.com",
+    const plain = ham();
+    expect(plain).toEqual({ score: 0, reasons: [], verdict: "ham" });
+    expect(foldSpamAssassin(plain, { score: 4.9 })).toBe(plain);
+
+    expect(foldSpamAssassin(plain, { score: 9.6 })).toEqual({
+      score: 10,
+      reasons: ["spamassassin"],
+      verdict: "ham",
     });
-    expect(ham).toEqual({ score: 0, reasons: [], verdict: "ham" });
-    expect(foldSpamAssassin(ham, { score: 4.9 })).toBe(ham);
-
-    const partial = foldSpamAssassin(ham, { score: 10 });
-    expect(partial).toEqual({ score: 10, reasons: ["spamassassin"], verdict: "ham" });
-
-    const capped = foldSpamAssassin(ham, { score: 1000 });
-    expect(capped).toEqual({ score: SPAMASSASSIN_CORE_CAP, reasons: ["spamassassin"], verdict: "ham" });
-
-    const withOneRule = foldSpamAssassin(
-      { score: 8, reasons: ["urgency_notice"], verdict: "ham" },
-      { score: 1000 },
-    );
-    expect(withOneRule).toEqual({ score: 60, reasons: ["urgency_notice", "spamassassin"], verdict: "spam" });
+    expect(foldSpamAssassin(plain, { score: 5 })).toEqual({
+      score: 5,
+      reasons: ["spamassassin"],
+      verdict: "ham",
+    });
   });
 
-  it("leaves allow and block decisions unchanged", () => {
+  it("flags a GTUBE hit even when the core score is 0", () => {
+    const flagged = foldSpamAssassin(ham(), {
+      score: 1000,
+      hits: [{ name: SPAMASSASSIN_GTUBE_RULE, score: 1000 }],
+    });
+    expect(flagged).toEqual({ score: SPAMASSASSIN_CORE_CAP, reasons: ["spamassassin"], verdict: "spam" });
+
+    const withCorePoints = foldSpamAssassin(
+      { score: 8, reasons: ["urgency_notice"], verdict: "ham" },
+      { score: 1000, hits: [{ name: "GTUBE" }] },
+    );
+    expect(withCorePoints).toEqual({ score: 60, reasons: ["urgency_notice", "spamassassin"], verdict: "spam" });
+  });
+
+  it("flags a native score of 10 or more on its own and leaves 9.x ham", () => {
+    const plain = ham();
+    expect(foldSpamAssassin(plain, { score: 10 })).toEqual({
+      score: 10,
+      reasons: ["spamassassin"],
+      verdict: "spam",
+    });
+    expect(foldSpamAssassin(plain, { score: 9.9 })).toEqual({
+      score: 10,
+      reasons: ["spamassassin"],
+      verdict: "ham",
+    });
+    expect(foldSpamAssassin(plain, { score: 20 }, { standaloneSpamScore: null })).toEqual({
+      score: 20,
+      reasons: ["spamassassin"],
+      verdict: "ham",
+    });
+  });
+
+  it("lets a GTUBE hit override an allow decision and leaves other list decisions in place", () => {
     const allowed = scoreSpam({
       from: "alice@example.com",
       subject: GTUBE,
@@ -202,7 +241,13 @@ describe("foldSpamAssassin", () => {
       threshold: 60,
     });
     expect(allowed.verdict).toBe("ham");
-    expect(foldSpamAssassin(allowed, { score: 1000 })).toEqual(allowed);
+    expect(foldSpamAssassin(allowed, { score: 15 })).toEqual(allowed);
+    expect(foldSpamAssassin(allowed, { score: 1000, hits: [{ name: "GTUBE", score: 1000 }] })).toEqual({
+      score: SPAMASSASSIN_CORE_CAP,
+      reasons: ["spamassassin"],
+      verdict: "spam",
+    });
+    expect(foldSpamAssassin(allowed, { score: 1000, hits: [{ name: "GTUBE" }] }, { gtubeAlwaysSpam: false })).toEqual(allowed);
 
     const blocked = scoreSpam({
       from: "alice@example.com",
@@ -213,13 +258,14 @@ describe("foldSpamAssassin", () => {
       lists: { ...EMPTY_LISTS, blockSenders: ["alice@example.com"] },
       threshold: 60,
     });
-    expect(foldSpamAssassin(blocked, { score: 1000 })).toEqual(blocked);
+    expect(foldSpamAssassin(blocked, { score: 1000, hits: [{ name: "GTUBE" }] })).toEqual(blocked);
   });
 
-  it("uses the caller's core threshold when recomputing the verdict", () => {
+  it("uses the caller's core threshold for native scores below the standalone line", () => {
     const assessment = { score: 0, reasons: [], verdict: "ham" as const };
-    expect(foldSpamAssassin(assessment, { score: 20 }, { threshold: 15 }).verdict).toBe("spam");
-    expect(foldSpamAssassin(assessment, { score: 20 }, { threshold: 30 }).verdict).toBe("ham");
+    expect(foldSpamAssassin(assessment, { score: 8 }, { threshold: 5 }).verdict).toBe("spam");
+    expect(foldSpamAssassin(assessment, { score: 8 }, { threshold: 30 }).verdict).toBe("ham");
+    expect(foldSpamAssassin(assessment, { score: 20 }, { threshold: 30 }).verdict).toBe("spam");
   });
 });
 

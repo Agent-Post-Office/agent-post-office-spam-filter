@@ -12,7 +12,8 @@
       "url": "https://spamassassin.apache.org/old/publiccorpus/20030228_easy_ham.tar.bz2",
       "sha256": "2b7b65904bcfcc31d2b5f51946f2d261370b257402cbbd62930b46ab83367438",
       "scored": 2500,
-      "nativeAtLeast5": 8
+      "nativeAtLeast5": 8,
+      "flagged": 0
     },
     {
       "id": "spam_2",
@@ -20,7 +21,8 @@
       "url": "https://spamassassin.apache.org/old/publiccorpus/20050311_spam_2.tar.bz2",
       "sha256": "44280a0e28bf7645b2279e8e42659271ad82c6f40bf8d364dbda7f1df344a765",
       "scored": 1396,
-      "nativeAtLeast5": 205
+      "nativeAtLeast5": 205,
+      "flagged": 26
     }
   ]
 }

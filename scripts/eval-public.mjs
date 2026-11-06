@@ -3,7 +3,9 @@
  *
  * Opt-in. The messages are downloaded, checked, scored, and discarded.
  * They are not committed. Output is aggregate counts, plus filenames and
- * hit names when --list is passed. Message text is never printed.
+ * hit names for flagged messages when --list is passed. Flagged means a
+ * GTUBE hit or a native score at or above the standalone threshold.
+ * Message text is never printed.
  *
  * Usage: node scripts/eval-public.mjs [--list]
  */
@@ -13,7 +15,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { scoreSpamAssassin } from "../dist/spamassassin/index.js";
+import { scoreSpamAssassin, SPAMASSASSIN_GTUBE_RULE, SPAMASSASSIN_STANDALONE_SPAM_SCORE } from "../dist/spamassassin/index.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const listHits = process.argv.includes("--list");
@@ -72,6 +74,7 @@ for (const corpus of corpora) {
   let scored = 0;
   let skipped = 0;
   let ge5 = 0;
+  let flagged = 0;
   const listed = [];
   for (const file of walk(extractPath)) {
     const raw = fs.readFileSync(file);
@@ -87,8 +90,11 @@ for (const corpus of corpora) {
       throw new Error(`${corpus.id} ${relative} failed to score: ${error instanceof Error ? error.name : "Error"}`);
     }
     scored += 1;
-    if (sa.score >= 5) {
-      ge5 += 1;
+    const gtube = sa.hits.some((hit) => hit.name === SPAMASSASSIN_GTUBE_RULE);
+    const flags = gtube || sa.score >= SPAMASSASSIN_STANDALONE_SPAM_SCORE;
+    if (sa.score >= 5) ge5 += 1;
+    if (flags) {
+      flagged += 1;
       if (listHits) {
         const relative = path.relative(extractPath, file).split(path.sep).join("/");
         listed.push(`${relative} ${sa.score.toFixed(3)} ${sa.hits.map((hit) => hit.name).join(",")}`);
@@ -96,9 +102,9 @@ for (const corpus of corpora) {
     }
   }
   console.log(
-    `${corpus.id} scored ${scored} skipped ${skipped} native>=5 ${ge5} (expected scored ${corpus.scored}, native>=5 ${corpus.nativeAtLeast5})`,
+    `${corpus.id} scored ${scored} skipped ${skipped} native>=5 ${ge5} flagged ${flagged} (expected scored ${corpus.scored}, native>=5 ${corpus.nativeAtLeast5}, flagged ${corpus.flagged})`,
   );
-  if (scored !== corpus.scored || ge5 !== corpus.nativeAtLeast5) {
+  if (scored !== corpus.scored || ge5 !== corpus.nativeAtLeast5 || flagged !== corpus.flagged) {
     console.log(`FAIL ${corpus.id} counts differ from vendor/spamassassin/sources.json`);
     failed = true;
   }

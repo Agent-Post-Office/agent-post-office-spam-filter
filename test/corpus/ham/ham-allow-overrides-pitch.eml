@@ -8,4 +8,3 @@ Content-Type: text/plain; charset=UTF-8
 Authentication-Results: mx.example.net; dkim=pass; spf=pass; dmarc=pass
 
 We noticed a few pages. Got 15 minutes? Book a demo.
-XJS*C4JDBQADN1.NSBN3*2IDNEN*GTUBE-STANDARD-ANTI-UBE-TEST-EMAIL*C.34X

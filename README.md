@@ -156,12 +156,11 @@ import { scoreMessage } from "@agent-post-office/spam-filter";
 import {
   scoreSpamAssassin,
   foldSpamAssassin,
-  SPAMASSASSIN_THRESHOLD,
-  SPAMASSASSIN_CORE_CAP,
+  SPAMASSASSIN_STANDALONE_SPAM_SCORE,
 } from "@agent-post-office/spam-filter/spamassassin";
 
 const sa = await scoreSpamAssassin(rawRfc5322);
-// sa.score is SpamAssassin's own points. SpamAssassin's threshold is 5.
+// sa.score is SpamAssassin's own points. SpamAssassin's own threshold is 5.
 // sa.hits is { name, score }[]. sa.skipped is set only when a rule was not run.
 
 const core = scoreMessage({
@@ -172,26 +171,24 @@ const core = scoreMessage({
   recipientDomain,
 });
 
-// Capped contribution. Below 5 native points, add 0.
-// Otherwise add min(52, round(native score)). 52 stays ham at the default threshold.
-const blended = foldSpamAssassin(core, sa, { threshold: 60 });
+// Defaults: gtubeAlwaysSpam true, standaloneSpamScore 10.
+// Below 10, add min(52, round(native)) only when native >= 5. That addition stays under 60.
+// At 10 or more, or when GTUBE hits, the verdict is spam even if the core score is under 60.
+const blended = foldSpamAssassin(core, sa, {
+  threshold: 60,
+  gtubeAlwaysSpam: true,
+  standaloneSpamScore: SPAMASSASSIN_STANDALONE_SPAM_SCORE,
+});
 ```
 
-| Native score | Core points added (cap 52) |
-| --- | --- |
-| below 5, or negative | 0 |
-| 5 | 5 |
-| 20 | 20 |
-| 52 or more, including GTUBE at 1000 | 52 |
+| Native score | Core points added (cap 52) | Verdict when the core score is 0 |
+| --- | --- | --- |
+| below 5, or negative | 0 | ham |
+| 5 up to but not including 10 | `round(native)` | ham |
+| 10 or more | `min(52, round(native))` | **spam** |
+| GTUBE hit (native 1000) | 52 | **spam**, including when an allow list matched |
 
-Allow and block decisions stay as the core scorer made them. The added reason is `spamassassin`. Pass the same `threshold` you used for the core score.
-
-A host that wants every native score of 5 or more to apply the full cap can gate it:
-
-```ts
-const gated = { score: sa.score >= SPAMASSASSIN_THRESHOLD ? SPAMASSASSIN_CORE_CAP : 0 };
-const strong = foldSpamAssassin(core, gated, { threshold: 60 });
-```
+`gtubeAlwaysSpam` defaults to true. `standaloneSpamScore` defaults to 10. Set `standaloneSpamScore` to `null` to keep the numeric fold only. Set `gtubeAlwaysSpam` to false to let a GTUBE hit follow the numeric rule. A block decision stays as the core scorer made it. An allow decision stays ham unless GTUBE hits. The added reason is `spamassassin`. Pass the same `threshold` you used for the core score. Below 10, that threshold is what turns the summed score into a verdict. At 10 or above, the verdict is spam even when the summed score is under the threshold. The reported score is still the capped sum, so a native 10 on a core score of 0 is score 10 and verdict spam.
 
 `scoreSpamAssassin` accepts a string, `ArrayBuffer`, or `Uint8Array` of the raw RFC5322 message.
 
@@ -210,21 +207,21 @@ The rule table is generated from SpamAssassin update channel **r1939780** and ch
 
 1536 rules are in the table. 322 carry a non-zero score. 100 have score 0 and do not match. The standard GTUBE string scores at least 1000 native points.
 
-On a fresh run of the public corpus (sha256 checked, messages not stored in this repository):
+On a fresh run of the public corpus (sha256 checked, messages not stored in this repository). Flagged means a GTUBE hit or a native score of 10 or more, which is what the default fold marks spam on its own:
 
-| Corpus | Messages scored | Native score ≥ 5 |
-| --- | --- | --- |
-| `20050311_spam_2` | 1396 | **205** |
-| `20030228_easy_ham` | 2500 | **8** |
+| Corpus | Messages scored | Native score ≥ 5 | Flagged |
+| --- | --- | --- | --- |
+| `20050311_spam_2` | 1396 | 205 | **26** |
+| `20030228_easy_ham` | 2500 | 8 | **0** |
 
-Those archives stay a pinned download. Their redistribution terms are unclear, and they contain other people's mail, so they are not committed. `npm run eval:public` downloads them, checks sha256, scores them, and fails if those counts change. `npm run eval:public -- --list` also prints the filename and hit names for each message at or above 5. It does not print message text. The cache is `vendor/spamassassin/corpus/`, which is gitignored.
+Those archives stay a pinned download. Their redistribution terms are unclear, and they contain other people's mail, so they are not committed. `npm run eval:public` downloads them, checks sha256, scores them, and fails if those counts change. `npm run eval:public -- --list` also prints the filename and hit names for each flagged message. It does not print message text. The cache is `vendor/spamassassin/corpus/`, which is gitignored.
 
 | Corpus | Archive | sha256 |
 | --- | --- | --- |
 | `easy_ham` | `https://spamassassin.apache.org/old/publiccorpus/20030228_easy_ham.tar.bz2` | `2b7b65904bcfcc31d2b5f51946f2d261370b257402cbbd62930b46ab83367438` |
 | `spam_2` | `https://spamassassin.apache.org/old/publiccorpus/20050311_spam_2.tar.bz2` | `44280a0e28bf7645b2279e8e42659271ad82c6f40bf8d364dbda7f1df344a765` |
 
-The eight easy-ham messages at or above 5 are upstream hits. The headers and body patterns those rules name are present in the messages. On the two `MIXED_HREF_CASE` messages, a line scan and a whole-part scan still show a mixed-case href difference, which is what that rule matches. Rule scores were left as published. Before and after that check, easy ham at or above 5 is 8 of 2500, and spam_2 at or above 5 is 205 of 1396.
+The eight easy-ham messages at or above 5 are upstream hits, and each of them scores under 10, so the default fold leaves them ham. The headers and body patterns those rules name are present in the messages. On the two `MIXED_HREF_CASE` messages, a line scan and a whole-part scan still show a mixed-case href difference, which is what that rule matches. Rule scores were left as published.
 
 | File | Hits |
 | --- | --- |
@@ -244,7 +241,7 @@ Minified browser bundles from esbuild (legal comments stripped):
 | Entry | Raw | Gzip |
 | --- | --- | --- |
 | `@agent-post-office/spam-filter` | 10,882 bytes | **4,336 bytes** |
-| `@agent-post-office/spam-filter/spamassassin` | 679,280 bytes | **177,438 bytes** |
+| `@agent-post-office/spam-filter/spamassassin` | 679,670 bytes | **177,627 bytes** |
 
 The add-on figure includes `postal-mime` and `htmlparser2`. The core bundle contains neither, and it contains none of the rule table.
 
@@ -254,7 +251,7 @@ The add-on figure includes `postal-mime` and `htmlparser2`. The core bundle cont
 - MIME structure and HTML visibility are approximate. `postal-mime`'s public `text` and `html` fields synthesize the missing alternative, which would double-count parts. The scorer walks the parser's MIME tree instead: `root`, `childNodes`, `contentType.parsed.value`, and `getTextContent`. Those fields are not a public API. They were checked against **postal-mime 2.7.4**. If the shape is missing, scoring throws `SpamAssassinError` rather than guessing. Upgrading `postal-mime` means re-checking this walk.
 - JavaScript regular expressions can spend a long time on a hostile pattern. There is no per-rule time limit. Raw input over **2,000,000** bytes throws before parsing. Each text part keeps at most 50,000 visible characters and 500,000 rawbody characters. Paragraphs are capped at 2,048 bytes and rawbody chunks at 4,096.
 - Header rules see the raw message, including any `Authentication-Results` the sender wrote. Core authentication points still come from the header the host passes to `scoreMessage`.
-- Native points and the core 0-100 score are different scales. Folding uses the cap above. The core default threshold stays 60 either way.
+- Native points and the core 0-100 score are different scales. The points cap is 52. A GTUBE hit, or a native score of 10 or more, flags even when that capped sum is under 60. Below 10 the fold cannot flag on its own. The core default threshold stays 60.
 
 See `NOTICE`. SpamAssassin is a trademark of the Apache Software Foundation. These are modified rule representations translated to JavaScript, not the SpamAssassin engine. No endorsement is implied.
 
@@ -262,22 +259,21 @@ See `NOTICE`. SpamAssassin is a trademark of the Apache Software Foundation. The
 
 `test/corpus` is a labeled set of synthetic messages: 45 total, 25 ham and 20 spam. `npm run eval` builds the package, scores every fixture with `scoreMessage` and with `scoreSpamAssassin`, and applies the default fold. The verdict that must match the label is that folded verdict. The command prints a core-only confusion matrix and a folded confusion matrix. It exits non-zero when a folded verdict disagrees with its label, or when the false-positive or false-negative total differs from `expectedCounts` in `test/corpus/manifest.json`. Pull-request CI runs this.
 
-A disagreement is allowed only through `expected.verdict` plus `expected.reason` on that fixture. The committed counts are 0 false positives and 3 false negatives:
+A disagreement is allowed only through `expected.verdict` plus `expected.reason` on that fixture. The committed counts are 0 false positives and 2 false negatives:
 
 | Fixture | Why the folded verdict stays ham |
 | --- | --- |
-| `spam-gtube` | GTUBE is 1000 native points. The default fold adds at most 52, and 52 stays ham at threshold 60. |
-| `spam-advance-fee` | Advance-fee wording matches SpamAssassin body rules and no core rule. The fold adds only those points. |
-| `spam-pharmacy` | Pharmacy wording matches SpamAssassin rules and no core rule. The fold adds only those points. |
+| `spam-advance-fee` | Advance-fee wording scores 7.797 native points and matches no core rule. Below 10 the fold only adds the rounded points. |
+| `spam-pharmacy` | Pharmacy wording scores 9.592 native points and matches no core rule. 9.592 is under 10, so the fold does not flag it on its own. |
 
-`spam-gtube-plus-verification` and `spam-advance-plus-auth` are the cases where that same fold crosses 60 because the core score is already partway there. `ham-allow-overrides-pitch` stays ham: an allow decision is not changed by the fold.
+`spam-gtube` is spam at core score 0 because the GTUBE rule hits. `ham-allow-overrides-pitch` stays ham: an allow decision is left in place when the message has no GTUBE hit.
 
 Folded confusion matrix for this set:
 
 | label \ verdict | ham | spam |
 | --- | --- | --- |
 | ham | 25 | 0 |
-| spam | 3 | 17 |
+| spam | 2 | 18 |
 
 Do not add real mail. Not from Agent Post Office, not from a mailbox, and not from the SpamAssassin public corpus. Addresses must use `example.com`, `example.org`, `example.net`, or the single-label domain `invalid`. Names must be placeholders. `npm run eval` rejects any other domain.
 

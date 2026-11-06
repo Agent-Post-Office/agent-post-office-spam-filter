@@ -2,7 +2,7 @@
   "threshold": 60,
   "expectedCounts": {
     "falsePositive": 0,
-    "falseNegative": 3
+    "falseNegative": 2
   },
   "messages": [
     {
@@ -189,7 +189,7 @@
       "id": "ham-allow-overrides-pitch",
       "label": "ham",
       "file": "ham/ham-allow-overrides-pitch.eml",
-      "reason": "Allow list stays ham over a cold pitch and over the GTUBE string",
+      "reason": "Allow list stays ham over a cold pitch. A GTUBE hit still flags.",
       "source": "synthetic",
       "recipientDomain": "example.com",
       "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass",
@@ -384,14 +384,10 @@
       "id": "spam-gtube",
       "label": "spam",
       "file": "spam/spam-gtube.eml",
-      "reason": "GTUBE string, which SpamAssassin scores at 1000",
+      "reason": "GTUBE hit. The default fold flags it even when the core score is 0.",
       "source": "synthetic",
       "recipientDomain": "example.com",
-      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass",
-      "expected": {
-        "verdict": "ham",
-        "reason": "GTUBE scores 1000 native points. The default fold adds at most 52, and 52 stays ham at threshold 60."
-      }
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
     },
     {
       "id": "spam-advance-fee",
@@ -403,7 +399,7 @@
       "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass",
       "expected": {
         "verdict": "ham",
-        "reason": "Advance-fee wording matches SpamAssassin body rules and no core rule. The default fold adds only those points, which stays under 60."
+        "reason": "Advance-fee wording scores under 10 native points and matches no core rule. Below 10 the fold only adds min(52, round(native)), which stays ham."
       }
     },
     {
@@ -416,7 +412,7 @@
       "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass",
       "expected": {
         "verdict": "ham",
-        "reason": "Pharmacy wording matches SpamAssassin rules and no core rule. The default fold adds only those points, which stays under 60."
+        "reason": "Pharmacy wording scores under 10 native points and matches no core rule. Below 10 the fold only adds min(52, round(native)), which stays ham."
       }
     },
     {

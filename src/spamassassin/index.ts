@@ -10,7 +10,9 @@ export { SpamAssassinError } from "./errors.js";
 
 export {
   SPAMASSASSIN_CORE_CAP,
+  SPAMASSASSIN_GTUBE_RULE,
   SPAMASSASSIN_RAW_BYTE_LIMIT,
+  SPAMASSASSIN_STANDALONE_SPAM_SCORE,
   SPAMASSASSIN_THRESHOLD,
 } from "./limits.js";
 

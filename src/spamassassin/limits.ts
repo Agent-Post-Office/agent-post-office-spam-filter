@@ -4,10 +4,20 @@ export const SPAMASSASSIN_THRESHOLD = 5;
 /**
  * Max points {@link foldSpamAssassin} adds to a core score.
  * 52 is the default core threshold (60) minus the smallest other positive
- * weight (8). A full contribution stays ham on its own. One more content or
- * authentication signal can reach 60. Same cap as Bayes.
+ * weight (8). Same cap as Bayes. The points alone stay under 60.
+ * A GTUBE hit, or a native score at or above {@link SPAMASSASSIN_STANDALONE_SPAM_SCORE},
+ * still forces a spam verdict.
  */
 export const SPAMASSASSIN_CORE_CAP = 52;
+
+/**
+ * Native score at or above this flags on its own.
+ * Below this, the fold only adds {@link spamAssassinCorePoints}.
+ */
+export const SPAMASSASSIN_STANDALONE_SPAM_SCORE = 10;
+
+/** Rule name whose hit forces a spam verdict when `gtubeAlwaysSpam` is set. */
+export const SPAMASSASSIN_GTUBE_RULE = "GTUBE";
 
 /** Raw messages larger than this are refused before parsing or regex matching. */
 export const SPAMASSASSIN_RAW_BYTE_LIMIT = 2_000_000;
