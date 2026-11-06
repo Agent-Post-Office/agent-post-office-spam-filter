@@ -1,0 +1,12 @@
+From: Bob Example <bob@example.com>
+To: Reports <reports@example.com>
+Subject: Re: October analytics
+Date: Fri, 06 Nov 2026 10:00:00 +0000
+Message-ID: <ham-reply-thanks@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Authentication-Results: mx.example.net; dkim=pass; spf=pass; dmarc=pass
+In-Reply-To: <ham-analytics-report@example.com>
+References: <ham-analytics-report@example.com>
+
+Thanks, I filed the report.

@@ -1,6 +1,6 @@
 # @agent-post-office/spam-filter
 
-A small, dependency-light spam scorer for agent mailboxes. Pure TypeScript. Zero runtime dependencies. Runs in Cloudflare Workers, browsers, and Node.
+A small, dependency-light spam scorer for agent mailboxes. Pure TypeScript. The core entry has no runtime dependencies. Runs in Cloudflare Workers, browsers, and Node.
 
 Extracted from [Agent Post Office](https://github.com/Agent-Post-Office/agentpostoffice-cloudflare).
 
@@ -8,7 +8,7 @@ Extracted from [Agent Post Office](https://github.com/Agent-Post-Office/agentpos
 
 > Status: v0.1.1, [published on npm](https://www.npmjs.com/package/@agent-post-office/spam-filter). Release steps are in [RELEASING.md](RELEASING.md).
 
-Scorer matches APO main `8ccceaf`: content rules, Authentication-Results, allow/block lists, and Bayes from operator marks. The optional SpamAssassin rule add-on is **planned** and is not exported yet.
+Scorer matches APO main `8ccceaf`: content rules, Authentication-Results, allow/block lists, and Bayes from operator marks. SpamAssassin rules are an optional subpath, `@agent-post-office/spam-filter/spamassassin`.
 
 ## Quick start
 
@@ -137,28 +137,152 @@ Worker-side research (2026-11-06) found no drop-in replacement for authenticated
 | formshield-ai | Aimed at form spam, not mailbox cold pitches |
 | spamscanner | **BUSL-1.1**; needs Node built-ins; does not bundle cleanly for Workers |
 | Bayes libraries (`bayes`, `nbayes`, classificator, wink) | Run in a Worker; useful as a learning layer, which this package now includes as pure functions |
-| SpamAssassin / rspamd hosts | Need an external process; not a pure Worker library |
+| SpamAssassin / rspamd hosts | A full engine still needs an external process. A rule subset ships as the optional subpath below |
 
-A portable SpamAssassin rule subset was measured separately:
+The core scorer stays the one above. The SpamAssassin subset is a supplementary generic-spam signal with its own entry point. See [Optional SpamAssassin rules](#optional-spamassassin-rules).
 
-- **322** active scoring rules after translation
-- Worker bundle about **683 KB**
-- Median about **3.6 ms** per message in the local harness
-- **14.7%** recall on a public SpamAssassin corpus
-- **0** on the available real APO spam snapshots
+## Optional SpamAssassin rules
 
-That is why SpamAssassin rules are planned as an **optional add-on**, not the core scorer.
+Import this only when you want it. The package root does not import it, so a core-only bundle stays the same size and the default threshold stays **60**.
 
-## Optional SpamAssassin add-on (planned)
+```bash
+npm install @agent-post-office/spam-filter postal-mime@2.7.4 htmlparser2@10.0.0
+```
 
-Not included in this package yet. When it ships:
+`postal-mime` and `htmlparser2` are optional peer dependencies, pinned to those exact versions. Installing the package on its own does not install them.
 
-- Optional subpath or separate entry, off by default
-- Keeps the Apache Software Foundation **NOTICE** and rule attributions
-- Remains explainable (rule hits), Worker-safe, and fail-open
-- Does not replace allow/block lists, auth signals, or Bayes
+```ts
+import { scoreMessage } from "@agent-post-office/spam-filter";
+import {
+  scoreSpamAssassin,
+  foldSpamAssassin,
+  SPAMASSASSIN_STANDALONE_SPAM_SCORE,
+} from "@agent-post-office/spam-filter/spamassassin";
 
-See `NOTICE`.
+const sa = await scoreSpamAssassin(rawRfc5322);
+// sa.score is SpamAssassin's own points. SpamAssassin's own threshold is 5.
+// sa.hits is { name, score }[]. sa.skipped is set only when a rule was not run.
+
+const core = scoreMessage({
+  from,
+  subject,
+  text,
+  authenticationResults, // host-supplied; this header inside the raw message is not a trust boundary
+  recipientDomain,
+});
+
+// Defaults: gtubeAlwaysSpam true, standaloneSpamScore 10.
+// Below 10, add min(52, round(native)) only when native >= 5. That addition stays under 60.
+// At 10 or more, or when GTUBE hits, the verdict is spam even if the core score is under 60.
+const blended = foldSpamAssassin(core, sa, {
+  threshold: 60,
+  gtubeAlwaysSpam: true,
+  standaloneSpamScore: SPAMASSASSIN_STANDALONE_SPAM_SCORE,
+});
+```
+
+| Native score | Core points added (cap 52) | Verdict when the core score is 0 |
+| --- | --- | --- |
+| below 5, or negative | 0 | ham |
+| 5 up to but not including 10 | `round(native)` | ham |
+| 10 or more | `min(52, round(native))` | **spam** |
+| GTUBE hit (native 1000) | 52 | **spam**, including when an allow list matched |
+
+`gtubeAlwaysSpam` defaults to true. `standaloneSpamScore` defaults to 10. Set `standaloneSpamScore` to `null` to keep the numeric fold only. Set `gtubeAlwaysSpam` to false to let a GTUBE hit follow the numeric rule. A block decision stays as the core scorer made it. An allow decision stays ham unless GTUBE hits. The added reason is `spamassassin`. Pass the same `threshold` you used for the core score. Below 10, that threshold is what turns the summed score into a verdict. At 10 or above, the verdict is spam even when the summed score is under the threshold. The reported score is still the capped sum, so a native 10 on a core score of 0 is score 10 and verdict spam.
+
+`scoreSpamAssassin` accepts a string, `ArrayBuffer`, or `Uint8Array` of the raw RFC5322 message.
+
+| Option | Effect |
+| --- | --- |
+| `knownHeaders` | Rules for any other header are skipped, so a missing header is not scored as absent. `ALL` and full-message rules are skipped too. |
+| `incompleteBody` | Body, rawbody, uri, and full rules are skipped. Header rules still run. A meta rule runs only when every dependency ran. |
+
+Skipped rule names come back on `skipped`. They are omitted from the score.
+
+### What this layer covers
+
+The rule table is generated from SpamAssassin update channel **r1939780** and checked in. `npm run sa:verify` downloads `https://sa-update.spamassassin.org/1939780.tar.gz`, checks sha256 `746079a187eefcee1806d077f54f1c0c0f8cb7ac39ce4f8cd94e49ec7a6ca04a`, recompiles, and diffs `src/spamassassin/generated.ts`. `npm run sa:verify -- --write` regenerates that file. The script needs `tar` and network. The scorer itself never fetches rules. `npm test` does not download the snapshot. GitHub Actions runs that check weekly and on `workflow_dispatch` (`.github/workflows/sa-verify.yml`). The workflow has `permissions: contents: read` and no secrets. It fails when the snapshot hash or the regenerated table differs. Pull-request CI does not download the snapshot.
+
+`if version` lines are evaluated as SpamAssassin **4.000001**. Changing that version changes which rules are selected.
+
+1536 rules are in the table. 322 carry a non-zero score. 100 have score 0 and do not match. The standard GTUBE string scores at least 1000 native points.
+
+On a fresh run of the public corpus (sha256 checked, messages not stored in this repository). Flagged means a GTUBE hit or a native score of 10 or more, which is what the default fold marks spam on its own:
+
+| Corpus | Messages scored | Native score ≥ 5 | Flagged |
+| --- | --- | --- | --- |
+| `20050311_spam_2` | 1396 | 205 | **26** |
+| `20030228_easy_ham` | 2500 | 8 | **0** |
+
+Those archives stay a pinned download. Their redistribution terms are unclear, and they contain other people's mail, so they are not committed. `npm run eval:public` downloads them, checks sha256, scores them, and fails if those counts change. `npm run eval:public -- --list` also prints the filename and hit names for each flagged message. It does not print message text. The cache is `vendor/spamassassin/corpus/`, which is gitignored.
+
+| Corpus | Archive | sha256 |
+| --- | --- | --- |
+| `easy_ham` | `https://spamassassin.apache.org/old/publiccorpus/20030228_easy_ham.tar.bz2` | `2b7b65904bcfcc31d2b5f51946f2d261370b257402cbbd62930b46ab83367438` |
+| `spam_2` | `https://spamassassin.apache.org/old/publiccorpus/20050311_spam_2.tar.bz2` | `44280a0e28bf7645b2279e8e42659271ad82c6f40bf8d364dbda7f1df344a765` |
+
+The eight easy-ham messages at or above 5 are upstream hits, and each of them scores under 10, so the default fold leaves them ham. The headers and body patterns those rules name are present in the messages. On the two `MIXED_HREF_CASE` messages, a line scan and a whole-part scan still show a mixed-case href difference, which is what that rule matches. Rule scores were left as published.
+
+| File | Hits |
+| --- | --- |
+| `easy_ham/00024.59c2cb781c60594315241e2b50ea70e2` | `MAILING_LIST_MULTI`, `AXB_XMAILER_MIMEOLE_OL_024C2`, `HK_RANDOM_REPLYTO`, `MSOE_MID_WRONG_CASE` |
+| `easy_ham/00062.009f5a1a8fa88f0b38299ad01562bb37` | `AXB_XMAILER_MIMEOLE_OL_024C2`, `MIXED_HREF_CASE`, `MSOE_MID_WRONG_CASE` |
+| `easy_ham/00115.d5db4a9d477aa17a19669e3945b7aedb` | `MAILING_LIST_MULTI`, `AXB_XMAILER_MIMEOLE_OL_024C2`, `HK_RANDOM_REPLYTO`, `MSOE_MID_WRONG_CASE` |
+| `easy_ham/00116.22aef63fc606e0ad46b5593bc897469a` | `MAILING_LIST_MULTI`, `AXB_XMAILER_MIMEOLE_OL_024C2`, `HK_RANDOM_REPLYTO`, `MSOE_MID_WRONG_CASE` |
+| `easy_ham/00118.f15bf997342540b404a4672c47d57d55` | `MAILING_LIST_MULTI`, `AXB_XMAILER_MIMEOLE_OL_024C2`, `HK_RANDOM_REPLYTO`, `MSOE_MID_WRONG_CASE` |
+| `easy_ham/00123.91b85aaea560d92f9199f9ba74e77918` | `MAILING_LIST_MULTI`, `AXB_XMAILER_MIMEOLE_OL_024C2`, `HK_RANDOM_REPLYTO`, `MSOE_MID_WRONG_CASE` |
+| `easy_ham/00166.8feace9f17d092d9532e62c35c37ce95` | `DRUGS_ANXIETY`, `FSL_HAS_TINYURL`, `MIXED_HREF_CASE` |
+| `easy_ham/00225.13c1eaece69dd93afacadb48189e65fc` | `MAILING_LIST_MULTI`, `AXB_XMAILER_MIMEOLE_OL_024C2`, `HK_RANDOM_REPLYTO`, `MSOE_MID_WRONG_CASE` |
+
+Median time on that spam set was about **3.4 ms** in this environment. The slowest easy-ham message was about **203 ms**. An earlier development pass also found no hits on Agent Post Office cold-pitch samples. Those samples are not in this repository.
+
+Minified browser bundles from esbuild (legal comments stripped):
+
+| Entry | Raw | Gzip |
+| --- | --- | --- |
+| `@agent-post-office/spam-filter` | 10,882 bytes | **4,336 bytes** |
+| `@agent-post-office/spam-filter/spamassassin` | 679,670 bytes | **177,627 bytes** |
+
+The add-on figure includes `postal-mime` and `htmlparser2`. The core bundle contains neither, and it contains none of the rule table.
+
+### Limitations
+
+- This is a rule-only subset. Eval plugins (401 `eval:` declarations in the snapshot), DNS tests (`uridnssub`, `urirhssub`, `askdns`, and `tflags net`), Bayes (`tflags learn`), `mimeheader` directives, and trust-path headers (`X-Spam-Relays-*`, `ALL-*`, `EnvelopeFrom`) are absent. A meta rule is dropped when any dependency was dropped, so a missing test cannot become a hit. The `mimeheader` rules (62 directives in this snapshot) are left for a later change.
+- MIME structure and HTML visibility are approximate. `postal-mime`'s public `text` and `html` fields synthesize the missing alternative, which would double-count parts. The scorer walks the parser's MIME tree instead: `root`, `childNodes`, `contentType.parsed.value`, and `getTextContent`. Those fields are not a public API. They were checked against **postal-mime 2.7.4**. If the shape is missing, scoring throws `SpamAssassinError` rather than guessing. Upgrading `postal-mime` means re-checking this walk.
+- JavaScript regular expressions can spend a long time on a hostile pattern. There is no per-rule time limit. Raw input over **2,000,000** bytes throws before parsing. Each text part keeps at most 50,000 visible characters and 500,000 rawbody characters. Paragraphs are capped at 2,048 bytes and rawbody chunks at 4,096.
+- Header rules see the raw message, including any `Authentication-Results` the sender wrote. Core authentication points still come from the header the host passes to `scoreMessage`.
+- Native points and the core 0-100 score are different scales. The points cap is 52. A GTUBE hit, or a native score of 10 or more, flags even when that capped sum is under 60. Below 10 the fold cannot flag on its own. The core default threshold stays 60.
+
+See `NOTICE`. SpamAssassin is a trademark of the Apache Software Foundation. These are modified rule representations translated to JavaScript, not the SpamAssassin engine. No endorsement is implied.
+
+## Evaluation fixtures
+
+`test/corpus` is a labeled set of synthetic messages: 45 total, 25 ham and 20 spam. `npm run eval` builds the package, scores every fixture with `scoreMessage` and with `scoreSpamAssassin`, and applies the default fold. The verdict that must match the label is that folded verdict. The command prints a core-only confusion matrix and a folded confusion matrix. It exits non-zero when a folded verdict disagrees with its label, or when the false-positive or false-negative total differs from `expectedCounts` in `test/corpus/manifest.json`. Pull-request CI runs this.
+
+A disagreement is allowed only through `expected.verdict` plus `expected.reason` on that fixture. The committed counts are 0 false positives and 2 false negatives:
+
+| Fixture | Why the folded verdict stays ham |
+| --- | --- |
+| `spam-advance-fee` | Advance-fee wording scores 7.797 native points and matches no core rule. Below 10 the fold only adds the rounded points. |
+| `spam-pharmacy` | Pharmacy wording scores 9.592 native points and matches no core rule. 9.592 is under 10, so the fold does not flag it on its own. |
+
+`spam-gtube` is spam at core score 0 because the GTUBE rule hits. `ham-allow-overrides-pitch` stays ham: an allow decision is left in place when the message has no GTUBE hit.
+
+Folded confusion matrix for this set:
+
+| label \ verdict | ham | spam |
+| --- | --- | --- |
+| ham | 25 | 0 |
+| spam | 2 | 18 |
+
+Do not add real mail. Not from Agent Post Office, not from a mailbox, and not from the SpamAssassin public corpus. Addresses must use `example.com`, `example.org`, `example.net`, or the single-label domain `invalid`. Names must be placeholders. `npm run eval` rejects any other domain.
+
+### Add a fixture
+
+1. Add `test/corpus/ham/<id>.eml` or `test/corpus/spam/<id>.eml`. Include a normal `Date` and `Message-ID` so missing-header rules do not fire by accident.
+2. Add a row to `test/corpus/manifest.json` with `id`, `label` (`ham` or `spam`), `file`, a short `reason`, `source` set to `synthetic`, `recipientDomain`, and `authenticationResults`. The runner passes that authentication header to the core scorer. It is the host-supplied header.
+3. Optional `lists` covers an allow or block decision. Optional `expected` is only for a verdict that is supposed to disagree with the label. If you add one, update `expectedCounts`.
+4. Run `npm run eval`. If the folded verdict disagrees with the label and that is not intentional, change the fixture or the scorer. Do not quiet a surprise by adding `expected` without a reason you can defend.
 
 ## Install
 
@@ -288,8 +412,8 @@ Operator marks and lists in APO:
 
 - Storage for messages, folders, sender lists, token counts, and class counts (`SpamStore`)
 - Mark spam / not-spam tools and backfill
-- Queue parse wiring and MIME parsing
-- Optional SpamAssassin add-on (**planned**)
+- Queue parse wiring and MIME parsing for the core scorer
+- Whether to call `@agent-post-office/spam-filter/spamassassin`, and whether to fold or branch on its native score
 
 ## License
 

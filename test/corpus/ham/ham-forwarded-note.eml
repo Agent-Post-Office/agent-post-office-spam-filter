@@ -1,0 +1,10 @@
+From: Carol Example <carol@example.com>
+To: Bob Example <bob@example.com>
+Subject: Fwd: Thursday standup
+Date: Fri, 06 Nov 2026 10:00:00 +0000
+Message-ID: <ham-forwarded-note@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Authentication-Results: mx.example.net; dkim=pass; spf=pass; dmarc=pass
+
+Forwarding this so you have the time. The standup stays at 09:30.

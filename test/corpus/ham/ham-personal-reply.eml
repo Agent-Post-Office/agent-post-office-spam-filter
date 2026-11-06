@@ -1,0 +1,12 @@
+From: Bob Example <bob@example.com>
+To: Alice Example <alice@example.com>
+Subject: Re: Lunch on Friday
+Date: Fri, 06 Nov 2026 10:00:00 +0000
+Message-ID: <ham-personal-reply@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Authentication-Results: mx.example.net; dkim=pass; spf=pass; dmarc=pass
+In-Reply-To: <ham-personal-note@example.com>
+References: <ham-personal-note@example.com>
+
+Thanks, noon works. See you then.

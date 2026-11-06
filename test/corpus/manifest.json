@@ -1,0 +1,437 @@
+{
+  "threshold": 60,
+  "expectedCounts": {
+    "falsePositive": 0,
+    "falseNegative": 2
+  },
+  "messages": [
+    {
+      "id": "ham-personal-note",
+      "label": "ham",
+      "file": "ham/ham-personal-note.eml",
+      "reason": "Personal note between coworkers",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-personal-reply",
+      "label": "ham",
+      "file": "ham/ham-personal-reply.eml",
+      "reason": "Reply in an existing thread",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-transactional-receipt",
+      "label": "ham",
+      "file": "ham/ham-transactional-receipt.eml",
+      "reason": "Ordinary order receipt",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-transactional-shipping",
+      "label": "ham",
+      "file": "ham/ham-transactional-shipping.eml",
+      "reason": "Ordinary shipping notice",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-password-reset",
+      "label": "ham",
+      "file": "ham/ham-password-reset.eml",
+      "reason": "Password reset from the account domain, with no verification-subject phrase",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-newsletter-opt-in",
+      "label": "ham",
+      "file": "ham/ham-newsletter-opt-in.eml",
+      "reason": "Newsletter the recipient subscribed to, with no pitch phrase",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-single-label-domain",
+      "label": "ham",
+      "file": "ham/ham-single-label-domain.eml",
+      "reason": "Ordinary note from a single-label domain address",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-security-report",
+      "label": "ham",
+      "file": "ham/ham-security-report.eml",
+      "reason": "Routine security report with no pitch phrase",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-cold-audit-only",
+      "label": "ham",
+      "file": "ham/ham-cold-audit-only.eml",
+      "reason": "One cold-audit phrase stays under 60",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-meeting-ask-only",
+      "label": "ham",
+      "file": "ham/ham-meeting-ask-only.eml",
+      "reason": "One meeting ask stays under 60",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-outreach-only",
+      "label": "ham",
+      "file": "ham/ham-outreach-only.eml",
+      "reason": "One outreach opener stays under 60",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-analytics-report",
+      "label": "ham",
+      "file": "ham/ham-analytics-report.eml",
+      "reason": "Analytics report the recipient asked for, with no pitch phrase",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-verification-subject-only",
+      "label": "ham",
+      "file": "ham/ham-verification-subject-only.eml",
+      "reason": "Verification subject with a real body, from the account domain",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-verification-stack-under",
+      "label": "ham",
+      "file": "ham/ham-verification-stack-under.eml",
+      "reason": "Verification subject, urgency notice, and empty body stay under 60 without an authentication failure",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-dmarc-fail-only",
+      "label": "ham",
+      "file": "ham/ham-dmarc-fail-only.eml",
+      "reason": "One DMARC failure on an ordinary note stays under 60",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=fail"
+    },
+    {
+      "id": "ham-spf-fail-only",
+      "label": "ham",
+      "file": "ham/ham-spf-fail-only.eml",
+      "reason": "One SPF failure on an ordinary note stays under 60",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=fail; dmarc=pass"
+    },
+    {
+      "id": "ham-spf-softfail-only",
+      "label": "ham",
+      "file": "ham/ham-spf-softfail-only.eml",
+      "reason": "One SPF softfail on an ordinary note stays under 60",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=softfail; dmarc=pass"
+    },
+    {
+      "id": "ham-dkim-fail-only",
+      "label": "ham",
+      "file": "ham/ham-dkim-fail-only.eml",
+      "reason": "One DKIM failure on an ordinary note stays under 60",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=fail; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-downtime-pitch-under",
+      "label": "ham",
+      "file": "ham/ham-downtime-pitch-under.eml",
+      "reason": "Downtime pitch with an outreach opener and a meeting ask stays under 60",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-marketing-subdomain-audit",
+      "label": "ham",
+      "file": "ham/ham-marketing-subdomain-audit.eml",
+      "reason": "Cold audit from a marketing subdomain stays under 60 without a second pitch",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-allow-overrides-pitch",
+      "label": "ham",
+      "file": "ham/ham-allow-overrides-pitch.eml",
+      "reason": "Allow list stays ham over a cold pitch. A GTUBE hit still flags.",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass",
+      "lists": {
+        "allowSenders": [
+          "friend@example.org"
+        ]
+      }
+    },
+    {
+      "id": "ham-reply-thanks",
+      "label": "ham",
+      "file": "ham/ham-reply-thanks.eml",
+      "reason": "Short thanks in a thread",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-invoice",
+      "label": "ham",
+      "file": "ham/ham-invoice.eml",
+      "reason": "Ordinary invoice",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-calendar",
+      "label": "ham",
+      "file": "ham/ham-calendar.eml",
+      "reason": "Personal calendar note",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "ham-forwarded-note",
+      "label": "ham",
+      "file": "ham/ham-forwarded-note.eml",
+      "reason": "Forwarded personal note",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "spam-cold-outreach-meeting-marketing",
+      "label": "spam",
+      "file": "spam/spam-cold-outreach-meeting-marketing.eml",
+      "reason": "Cold audit, outreach, meeting ask, and a marketing subdomain",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "spam-seo-pitch",
+      "label": "spam",
+      "file": "spam/spam-seo-pitch.eml",
+      "reason": "SEO audit pitch with a meeting ask from a marketing subdomain",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "spam-verification-dmarc",
+      "label": "spam",
+      "file": "spam/spam-verification-dmarc.eml",
+      "reason": "Fake verification with an urgency notice, an empty body, and DMARC fail",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=fail"
+    },
+    {
+      "id": "spam-verification-spf-dkim",
+      "label": "spam",
+      "file": "spam/spam-verification-spf-dkim.eml",
+      "reason": "Empty verification plus SPF and DKIM failures",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=fail; spf=fail; dmarc=pass"
+    },
+    {
+      "id": "spam-verification-urgency-spf-dkim",
+      "label": "spam",
+      "file": "spam/spam-verification-urgency-spf-dkim.eml",
+      "reason": "Urgent empty verification plus SPF and DKIM failures",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=fail; spf=fail; dmarc=pass"
+    },
+    {
+      "id": "spam-auth-triple-fail",
+      "label": "spam",
+      "file": "spam/spam-auth-triple-fail.eml",
+      "reason": "DMARC, SPF, and DKIM all fail on an otherwise ordinary note",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=fail; spf=fail; dmarc=fail"
+    },
+    {
+      "id": "spam-audit-plus-auth",
+      "label": "spam",
+      "file": "spam/spam-audit-plus-auth.eml",
+      "reason": "Cold audit plus DMARC fail and SPF softfail",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=softfail; dmarc=fail"
+    },
+    {
+      "id": "spam-cold-outreach-spf-dkim",
+      "label": "spam",
+      "file": "spam/spam-cold-outreach-spf-dkim.eml",
+      "reason": "Cold audit and an outreach opener plus SPF and DKIM failures",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=fail; spf=fail; dmarc=pass"
+    },
+    {
+      "id": "spam-downtime-plus-dmarc",
+      "label": "spam",
+      "file": "spam/spam-downtime-plus-dmarc.eml",
+      "reason": "Downtime pitch plus DMARC fail",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=fail"
+    },
+    {
+      "id": "spam-outreach-meeting-dmarc",
+      "label": "spam",
+      "file": "spam/spam-outreach-meeting-dmarc.eml",
+      "reason": "Outreach opener and a meeting ask plus DMARC fail",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=fail"
+    },
+    {
+      "id": "spam-meeting-dmarc-spf",
+      "label": "spam",
+      "file": "spam/spam-meeting-dmarc-spf.eml",
+      "reason": "Meeting ask plus DMARC and SPF failures",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=fail; dmarc=fail"
+    },
+    {
+      "id": "spam-audit-marketing-dmarc",
+      "label": "spam",
+      "file": "spam/spam-audit-marketing-dmarc.eml",
+      "reason": "Cold audit from a marketing subdomain plus DMARC fail",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=fail"
+    },
+    {
+      "id": "spam-outreach-stack",
+      "label": "spam",
+      "file": "spam/spam-outreach-stack.eml",
+      "reason": "Outreach, meeting ask, unrelated incident, marketing subdomain, and SPF fail",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=fail; dmarc=pass"
+    },
+    {
+      "id": "spam-sender-block",
+      "label": "spam",
+      "file": "spam/spam-sender-block.eml",
+      "reason": "Exact sender block on an ordinary note",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass",
+      "lists": {
+        "blockSenders": [
+          "blocked@example.net"
+        ]
+      }
+    },
+    {
+      "id": "spam-domain-block",
+      "label": "spam",
+      "file": "spam/spam-domain-block.eml",
+      "reason": "Sender domain block on an ordinary note",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass",
+      "lists": {
+        "blockDomains": [
+          "blocked.example.net"
+        ]
+      }
+    },
+    {
+      "id": "spam-gtube",
+      "label": "spam",
+      "file": "spam/spam-gtube.eml",
+      "reason": "GTUBE hit. The default fold flags it even when the core score is 0.",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "spam-advance-fee",
+      "label": "spam",
+      "file": "spam/spam-advance-fee.eml",
+      "reason": "Classic advance-fee wording with no core pitch phrase",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass",
+      "expected": {
+        "verdict": "ham",
+        "reason": "Advance-fee wording scores under 10 native points and matches no core rule. Below 10 the fold only adds min(52, round(native)), which stays ham."
+      }
+    },
+    {
+      "id": "spam-pharmacy",
+      "label": "spam",
+      "file": "spam/spam-pharmacy.eml",
+      "reason": "Classic pharmacy wording with no core pitch phrase",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass",
+      "expected": {
+        "verdict": "ham",
+        "reason": "Pharmacy wording scores under 10 native points and matches no core rule. Below 10 the fold only adds min(52, round(native)), which stays ham."
+      }
+    },
+    {
+      "id": "spam-gtube-plus-verification",
+      "label": "spam",
+      "file": "spam/spam-gtube-plus-verification.eml",
+      "reason": "Verification subject plus GTUBE, so the fold cap crosses 60",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=pass"
+    },
+    {
+      "id": "spam-advance-plus-auth",
+      "label": "spam",
+      "file": "spam/spam-advance-plus-auth.eml",
+      "reason": "DMARC fail and a meeting ask, plus advance-fee wording that the fold adds",
+      "source": "synthetic",
+      "recipientDomain": "example.com",
+      "authenticationResults": "mx.example.net; dkim=pass; spf=pass; dmarc=fail"
+    }
+  ]
+}

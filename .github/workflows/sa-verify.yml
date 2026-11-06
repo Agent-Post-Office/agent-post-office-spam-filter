@@ -1,0 +1,29 @@
+name: SpamAssassin snapshot
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Weekly. Not part of pull-request CI: sa:verify downloads the pinned snapshot.
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify pinned snapshot
+        run: npm run sa:verify

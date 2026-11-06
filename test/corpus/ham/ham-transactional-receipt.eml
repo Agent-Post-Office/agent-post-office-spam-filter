@@ -1,0 +1,10 @@
+From: Billing Desk <billing@example.com>
+To: Bob Example <bob@example.com>
+Subject: Receipt for order 1042
+Date: Fri, 06 Nov 2026 10:00:00 +0000
+Message-ID: <ham-transactional-receipt@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Authentication-Results: mx.example.net; dkim=pass; spf=pass; dmarc=pass
+
+Thanks for your order. Order 1042 is paid. The total is 42.00 USD. This receipt is for your records.

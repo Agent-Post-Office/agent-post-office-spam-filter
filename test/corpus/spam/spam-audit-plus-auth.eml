@@ -1,0 +1,10 @@
+From: Pat Example <pat@example.org>
+To: Bob Example <bob@example.com>
+Subject: We tested your site
+Date: Fri, 06 Nov 2026 10:00:00 +0000
+Message-ID: <spam-audit-plus-auth@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Authentication-Results: mx.example.net; dkim=pass; spf=softfail; dmarc=fail
+
+The notes are short.

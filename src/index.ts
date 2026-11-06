@@ -2,7 +2,7 @@
  * @agent-post-office/spam-filter
  *
  * Worker-safe additive email spam scorer used by Agent Post Office.
- * Pure TypeScript. Zero runtime dependencies. Never drops mail.
+ * Pure TypeScript. The core entry has no runtime dependencies. Never drops mail.
  *
  * Scoring core matches APO main 8ccceaf (rules + Bayes). Hosts keep storage.
  */

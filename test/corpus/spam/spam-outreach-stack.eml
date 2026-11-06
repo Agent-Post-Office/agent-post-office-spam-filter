@@ -1,0 +1,10 @@
+From: Promo <promo@marketing.example.net>
+To: Owner Example <owner@example.com>
+Subject: Downtime at app.example.org
+Date: Fri, 06 Nov 2026 10:00:00 +0000
+Message-ID: <spam-outreach-stack@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Authentication-Results: mx.example.net; dkim=pass; spf=fail; dmarc=pass
+
+We noticed your status page. Checking in. Got 15 minutes? Book a demo.

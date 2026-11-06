@@ -30,3 +30,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Eval fixtures
+        run: node scripts/eval.mjs
