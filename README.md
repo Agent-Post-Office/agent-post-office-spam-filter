@@ -1,6 +1,6 @@
 # @agent-post-office/spam-filter
 
-A small, dependency-light spam scorer for agent mailboxes. Pure TypeScript. Zero runtime dependencies. Runs in Cloudflare Workers, browsers, and Node.
+A small, dependency-light spam scorer for agent mailboxes. Pure TypeScript. The core entry has no runtime dependencies. Runs in Cloudflare Workers, browsers, and Node.
 
 Extracted from [Agent Post Office](https://github.com/Agent-Post-Office/agentpostoffice-cloudflare).
 
@@ -8,7 +8,7 @@ Extracted from [Agent Post Office](https://github.com/Agent-Post-Office/agentpos
 
 > Status: v0.1.1, [published on npm](https://www.npmjs.com/package/@agent-post-office/spam-filter). Release steps are in [RELEASING.md](RELEASING.md).
 
-Scorer matches APO main `8ccceaf`: content rules, Authentication-Results, allow/block lists, and Bayes from operator marks. The optional SpamAssassin rule add-on is **planned** and is not exported yet.
+Scorer matches APO main `8ccceaf`: content rules, Authentication-Results, allow/block lists, and Bayes from operator marks. SpamAssassin rules are an optional subpath, `@agent-post-office/spam-filter/spamassassin`.
 
 ## Quick start
 
@@ -137,28 +137,106 @@ Worker-side research (2026-11-06) found no drop-in replacement for authenticated
 | formshield-ai | Aimed at form spam, not mailbox cold pitches |
 | spamscanner | **BUSL-1.1**; needs Node built-ins; does not bundle cleanly for Workers |
 | Bayes libraries (`bayes`, `nbayes`, classificator, wink) | Run in a Worker; useful as a learning layer, which this package now includes as pure functions |
-| SpamAssassin / rspamd hosts | Need an external process; not a pure Worker library |
+| SpamAssassin / rspamd hosts | A full engine still needs an external process. A rule subset ships as the optional subpath below |
 
-A portable SpamAssassin rule subset was measured separately:
+The core scorer stays the one above. The SpamAssassin subset is a supplementary generic-spam signal with its own entry point. See [Optional SpamAssassin rules](#optional-spamassassin-rules).
 
-- **322** active scoring rules after translation
-- Worker bundle about **683 KB**
-- Median about **3.6 ms** per message in the local harness
-- **14.7%** recall on a public SpamAssassin corpus
-- **0** on the available real APO spam snapshots
+## Optional SpamAssassin rules
 
-That is why SpamAssassin rules are planned as an **optional add-on**, not the core scorer.
+Import this only when you want it. The package root does not import it, so a core-only bundle stays the same size and the default threshold stays **60**.
 
-## Optional SpamAssassin add-on (planned)
+```bash
+npm install @agent-post-office/spam-filter postal-mime@2.7.4 htmlparser2@10.0.0
+```
 
-Not included in this package yet. When it ships:
+`postal-mime` and `htmlparser2` are optional peer dependencies, pinned to those exact versions. Installing the package on its own does not install them.
 
-- Optional subpath or separate entry, off by default
-- Keeps the Apache Software Foundation **NOTICE** and rule attributions
-- Remains explainable (rule hits), Worker-safe, and fail-open
-- Does not replace allow/block lists, auth signals, or Bayes
+```ts
+import { scoreMessage } from "@agent-post-office/spam-filter";
+import {
+  scoreSpamAssassin,
+  foldSpamAssassin,
+  SPAMASSASSIN_THRESHOLD,
+  SPAMASSASSIN_CORE_CAP,
+} from "@agent-post-office/spam-filter/spamassassin";
 
-See `NOTICE`.
+const sa = await scoreSpamAssassin(rawRfc5322);
+// sa.score is SpamAssassin's own points. SpamAssassin's threshold is 5.
+// sa.hits is { name, score }[]. sa.skipped is set only when a rule was not run.
+
+const core = scoreMessage({
+  from,
+  subject,
+  text,
+  authenticationResults, // host-supplied; this header inside the raw message is not a trust boundary
+  recipientDomain,
+});
+
+// Capped contribution. Below 5 native points, add 0.
+// Otherwise add min(52, round(native score)). 52 stays ham at the default threshold.
+const blended = foldSpamAssassin(core, sa, { threshold: 60 });
+```
+
+| Native score | Core points added (cap 52) |
+| --- | --- |
+| below 5, or negative | 0 |
+| 5 | 5 |
+| 20 | 20 |
+| 52 or more, including GTUBE at 1000 | 52 |
+
+Allow and block decisions stay as the core scorer made them. The added reason is `spamassassin`. Pass the same `threshold` you used for the core score.
+
+A host that wants every native score of 5 or more to apply the full cap can gate it:
+
+```ts
+const gated = { score: sa.score >= SPAMASSASSIN_THRESHOLD ? SPAMASSASSIN_CORE_CAP : 0 };
+const strong = foldSpamAssassin(core, gated, { threshold: 60 });
+```
+
+`scoreSpamAssassin` accepts a string, `ArrayBuffer`, or `Uint8Array` of the raw RFC5322 message.
+
+| Option | Effect |
+| --- | --- |
+| `knownHeaders` | Rules for any other header are skipped, so a missing header is not scored as absent. `ALL` and full-message rules are skipped too. |
+| `incompleteBody` | Body, rawbody, uri, and full rules are skipped. Header rules still run. A meta rule runs only when every dependency ran. |
+
+Skipped rule names come back on `skipped`. They are omitted from the score.
+
+### What this layer covers
+
+The rule table is generated from SpamAssassin update channel **r1939780** and checked in. `npm run sa:verify` downloads `https://sa-update.spamassassin.org/1939780.tar.gz`, checks sha256 `746079a187eefcee1806d077f54f1c0c0f8cb7ac39ce4f8cd94e49ec7a6ca04a`, recompiles, and diffs `src/spamassassin/generated.ts`. `npm run sa:verify -- --write` regenerates that file. The script needs `tar` and network. The scorer itself never fetches rules. `npm test` does not download the snapshot.
+
+`if version` lines are evaluated as SpamAssassin **4.000001**. Changing that version changes which rules are selected.
+
+1536 rules are in the table. 322 carry a non-zero score. 100 have score 0 and do not match. The standard GTUBE string scores at least 1000 native points.
+
+On a fresh run of the public corpus (sha256 checked, message text not stored here):
+
+| Corpus | Messages scored | Native score ≥ 5 |
+| --- | --- | --- |
+| `20050311_spam_2` | 1396 | **205** |
+| `20030228_easy_ham` | 2500 | **8** |
+
+Median time on that spam set was about **3.4 ms** in this environment. The slowest easy-ham message was about **203 ms**. An earlier development pass also found no hits on Agent Post Office cold-pitch samples. Those samples are not in this repository.
+
+Minified browser bundles from esbuild (legal comments stripped):
+
+| Entry | Raw | Gzip |
+| --- | --- | --- |
+| `@agent-post-office/spam-filter` | 10,882 bytes | **4,336 bytes** |
+| `@agent-post-office/spam-filter/spamassassin` | 679,280 bytes | **177,438 bytes** |
+
+The add-on figure includes `postal-mime` and `htmlparser2`. The core bundle contains neither, and it contains none of the rule table.
+
+### Limitations
+
+- This is a rule-only subset. Eval plugins (401 `eval:` declarations in the snapshot), DNS tests (`uridnssub`, `urirhssub`, `askdns`, and `tflags net`), Bayes (`tflags learn`), `mimeheader` directives, and trust-path headers (`X-Spam-Relays-*`, `ALL-*`, `EnvelopeFrom`) are absent. A meta rule is dropped when any dependency was dropped, so a missing test cannot become a hit.
+- MIME structure and HTML visibility are approximate. `postal-mime`'s public `text` and `html` fields synthesize the missing alternative, which would double-count parts. The scorer walks the parser's MIME tree instead: `root`, `childNodes`, `contentType.parsed.value`, and `getTextContent`. Those fields are not a public API. They were checked against **postal-mime 2.7.4**. If the shape is missing, scoring throws `SpamAssassinError` rather than guessing. Upgrading `postal-mime` means re-checking this walk.
+- JavaScript regular expressions can spend a long time on a hostile pattern. There is no per-rule time limit. Raw input over **2,000,000** bytes throws before parsing. Each text part keeps at most 50,000 visible characters and 500,000 rawbody characters. Paragraphs are capped at 2,048 bytes and rawbody chunks at 4,096.
+- Header rules see the raw message, including any `Authentication-Results` the sender wrote. Core authentication points still come from the header the host passes to `scoreMessage`.
+- Native points and the core 0-100 score are different scales. Folding uses the cap above. The core default threshold stays 60 either way.
+
+See `NOTICE`. SpamAssassin is a trademark of the Apache Software Foundation. These are modified rule representations translated to JavaScript, not the SpamAssassin engine. No endorsement is implied.
 
 ## Install
 
@@ -288,8 +366,8 @@ Operator marks and lists in APO:
 
 - Storage for messages, folders, sender lists, token counts, and class counts (`SpamStore`)
 - Mark spam / not-spam tools and backfill
-- Queue parse wiring and MIME parsing
-- Optional SpamAssassin add-on (**planned**)
+- Queue parse wiring and MIME parsing for the core scorer
+- Whether to call `@agent-post-office/spam-filter/spamassassin`, and whether to fold or branch on its native score
 
 ## License
 

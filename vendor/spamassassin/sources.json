@@ -1,0 +1,8 @@
+{
+  "spamassassin": {
+    "revision": "1939780",
+    "url": "https://sa-update.spamassassin.org/1939780.tar.gz",
+    "sha256": "746079a187eefcee1806d077f54f1c0c0f8cb7ac39ce4f8cd94e49ec7a6ca04a",
+    "conditionalVersion": "4.000001"
+  }
+}

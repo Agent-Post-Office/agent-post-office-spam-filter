@@ -11,3 +11,5 @@ coverage/
 .live-*.json
 PLAN.md
 FACTS.md
+vendor/spamassassin/*.tar.gz
+vendor/spamassassin/extract/

@@ -1,7 +1,7 @@
 {
   "name": "@agent-post-office/spam-filter",
   "version": "0.1.1",
-  "description": "Worker-safe additive email spam scorer used by Agent Post Office. Pure TypeScript, zero runtime dependencies.",
+  "description": "Worker-safe additive email spam scorer used by Agent Post Office. Pure TypeScript, no required runtime dependencies. Optional SpamAssassin rule subpath.",
   "type": "module",
   "license": "Apache-2.0",
   "author": "Agent Post Office",
@@ -15,7 +15,8 @@
     "cloudflare-workers",
     "authentication-results",
     "dmarc",
-    "phishing"
+    "phishing",
+    "spamassassin"
   ],
   "engines": {
     "node": ">=18"
@@ -26,7 +27,8 @@
     "src",
     "LICENSE",
     "README.md",
-    "NOTICE"
+    "NOTICE",
+    "vendor/spamassassin/sources.json"
   ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -34,6 +36,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./spamassassin": {
+      "types": "./dist/spamassassin/index.d.ts",
+      "import": "./dist/spamassassin/index.js"
     }
   },
   "scripts": {
@@ -41,10 +47,26 @@
     "prepare": "npm run build",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "sa:verify": "node scripts/sa/verify.mjs",
     "prepublishOnly": "npm run typecheck && npm test && npm run build"
   },
   "devDependencies": {
+    "esbuild": "0.28.2",
+    "htmlparser2": "10.0.0",
+    "postal-mime": "2.7.4",
     "typescript": "^5.9.0",
     "vitest": "^3.0.0"
+  },
+  "peerDependencies": {
+    "htmlparser2": "10.0.0",
+    "postal-mime": "2.7.4"
+  },
+  "peerDependenciesMeta": {
+    "htmlparser2": {
+      "optional": true
+    },
+    "postal-mime": {
+      "optional": true
+    }
   }
 }
