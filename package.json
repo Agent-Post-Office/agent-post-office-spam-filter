@@ -1,6 +1,6 @@
 {
   "name": "@agent-post-office/spam-filter",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Worker-safe additive email spam scorer used by Agent Post Office. Pure TypeScript, no required runtime dependencies. Optional SpamAssassin rule subpath.",
   "type": "module",
   "license": "Apache-2.0",
